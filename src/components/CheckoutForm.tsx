@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { ArrowLeft, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Calendar, Clock } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { Separator } from './ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { useCart } from '../hooks/useCart'
 import { DeliveryInfo } from '../types'
 
@@ -12,12 +13,54 @@ interface CheckoutFormProps {
   onBack: () => void
 }
 
+// Helper function to get available delivery dates (today + next 7 days)
+const getAvailableDates = () => {
+  const dates = []
+  const today = new Date()
+  
+  for (let i = 0; i < 8; i++) {
+    const date = new Date(today)
+    date.setDate(today.getDate() + i)
+    
+    const dateString = date.toISOString().split('T')[0]
+    const displayDate = i === 0 ? 'Today' : 
+                       i === 1 ? 'Tomorrow' : 
+                       date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    
+    dates.push({ value: dateString, label: displayDate })
+  }
+  
+  return dates
+}
+
+// Helper function to get available time slots
+const getAvailableTimeSlots = () => {
+  const slots = []
+  const startHour = 11 // 11 AM
+  const endHour = 22 // 10 PM
+  
+  for (let hour = startHour; hour <= endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+      const hour12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const time12 = `${hour12}:${minute.toString().padStart(2, '0')} ${ampm}`
+      
+      slots.push({ value: time24, label: time12 })
+    }
+  }
+  
+  return slots
+}
+
 export function CheckoutForm({ onBack }: CheckoutFormProps) {
   const { state, getTotalPrice, clearCart, closeCart } = useCart()
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
     customerName: '',
     customerPhone: '',
-    deliveryAddress: ''
+    deliveryAddress: '',
+    deliveryDate: '',
+    deliveryTime: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
@@ -59,8 +102,19 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
           <p className="text-gray-600 mb-4">
             Thank you for your order. We'll prepare your food and deliver it to your address.
           </p>
+          {deliveryInfo.deliveryDate && deliveryInfo.deliveryTime && (
+            <div className="bg-gray-50 p-3 rounded-lg mb-4">
+              <p className="text-sm text-gray-700">
+                <strong>Scheduled Delivery:</strong>
+              </p>
+              <p className="text-sm text-gray-600">
+                {getAvailableDates().find(d => d.value === deliveryInfo.deliveryDate)?.label} at{' '}
+                {getAvailableTimeSlots().find(t => t.value === deliveryInfo.deliveryTime)?.label}
+              </p>
+            </div>
+          )}
           <p className="text-sm text-gray-500">
-            Estimated delivery time: 30-45 minutes
+            We'll contact you if there are any changes to your delivery schedule.
           </p>
         </div>
         <Button onClick={handleOrderComplete} className="w-full">
@@ -72,7 +126,9 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
 
   const isFormValid = deliveryInfo.customerName.trim() && 
                      deliveryInfo.customerPhone.trim() && 
-                     deliveryInfo.deliveryAddress.trim()
+                     deliveryInfo.deliveryAddress.trim() &&
+                     deliveryInfo.deliveryDate &&
+                     deliveryInfo.deliveryTime
 
   return (
     <div className="flex flex-col h-full">
@@ -124,6 +180,48 @@ export function CheckoutForm({ onBack }: CheckoutFormProps) {
                 rows={3}
                 required
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="deliveryDate">Delivery Date *</Label>
+                <Select
+                  value={deliveryInfo.deliveryDate}
+                  onValueChange={(value) => handleInputChange('deliveryDate', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Select delivery date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableDates().map((date) => (
+                      <SelectItem key={date.value} value={date.value}>
+                        {date.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="deliveryTime">Delivery Time *</Label>
+                <Select
+                  value={deliveryInfo.deliveryTime}
+                  onValueChange={(value) => handleInputChange('deliveryTime', value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <Clock className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Select delivery time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableTimeSlots().map((slot) => (
+                      <SelectItem key={slot.value} value={slot.value}>
+                        {slot.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>

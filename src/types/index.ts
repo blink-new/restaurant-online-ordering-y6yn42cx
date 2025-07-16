@@ -27,6 +27,8 @@ export interface Order {
   customerName: string
   customerPhone: string
   deliveryAddress: string
+  deliveryDate: string
+  deliveryTime: string
   items: CartItem[]
   totalAmount: number
   status: 'pending' | 'confirmed' | 'preparing' | 'delivered'
@@ -37,4 +39,6 @@ export interface DeliveryInfo {
   customerName: string
   customerPhone: string
   deliveryAddress: string
+  deliveryDate: string
+  deliveryTime: string
 }
